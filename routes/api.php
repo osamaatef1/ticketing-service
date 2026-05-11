@@ -14,9 +14,11 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     Route::get('/health', HealthController::class);
 
-    Route::post('/public/tickets', [PublicTicketController::class, 'store']);
+    Route::middleware('throttle:public-tickets')->group(function () {
+        Route::post('/public/tickets', [PublicTicketController::class, 'store']);
+    });
 
-    Route::middleware('auth.jwt')->group(function () {
+    Route::middleware(['auth.jwt', 'throttle:admin'])->group(function () {
         Route::apiResource('tickets', TicketController::class);
 
         Route::patch('tickets/{ticket}/status', TicketStatusController::class);
