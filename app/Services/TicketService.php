@@ -47,6 +47,28 @@ class TicketService
         return $ticket->fresh();
     }
 
+    public function transition(Ticket $ticket, TicketStatus $status, ?int $adminId = null): Ticket
+    {
+        $changes = ['status' => $status];
+
+        match ($status) {
+            TicketStatus::Assigned => $changes += [
+                'admin_id' => $adminId,
+                'assigned_at' => now(),
+                'closed_at' => null,
+            ],
+            TicketStatus::Closed => $changes += [
+                'closed_at' => now(),
+            ],
+            default => $ticket->closed_at !== null
+                ? $changes['closed_at'] = null
+                : null,
+        };
+
+        $ticket->update($changes);
+        return $ticket->fresh();
+    }
+
     /**
      * @param  array<string,mixed>  $data
      * @param  UploadedFile[]  $attachments
