@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Services\AdminClient;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -42,6 +43,29 @@ class AppServiceProvider extends ServiceProvider
             return $admin?->id
                 ? Limit::perMinute(120)->by("admin:{$admin->id}")
                 : Limit::perMinute(30)->by('ip:'.$request->ip());
+        });
+
+        JsonResource::macro('paginationInformation', function ($request, $paginated, $default) {
+            $current = $paginated['current_page'] ?? null;
+            $last    = $paginated['last_page']    ?? null;
+
+            return [
+                'links' => [
+                    'first' => $paginated['first_page_url'] ?? null,
+                    'last'  => $paginated['last_page_url']  ?? null,
+                    'prev'  => $paginated['prev_page_url']  ?? null,
+                    'next'  => $paginated['next_page_url']  ?? null,
+                ],
+                'meta' => [
+                    'current_page' => $current,
+                    'last_page'    => $last,
+                    'per_page'     => $paginated['per_page'] ?? null,
+                    'total'        => $paginated['total']    ?? null,
+                    'from'         => $paginated['from']     ?? null,
+                    'to'           => $paginated['to']       ?? null,
+                    'has_more'     => is_int($current) && is_int($last) && $current < $last,
+                ],
+            ];
         });
     }
 }

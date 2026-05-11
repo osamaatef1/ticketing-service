@@ -9,6 +9,7 @@ use App\Http\Resources\TicketResource;
 use App\Models\Ticket;
 use App\Services\TicketService;
 use App\Support\ActingAdmin;
+use Illuminate\Container\Container;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -21,17 +22,39 @@ class TicketController extends Controller
     {
         $query = Ticket::query()
             ->withCount(['replies', 'notes'])
-            ->with('media')
-            ->latest('id');
+            ->with('media');
 
-        $this->tickets->applyFilters($query, $request->only([
-            'status', 'admin_id', 'category_id', 'season_id', 'zone_id', 'platform', 'q', 'from', 'to',
-        ]));
+        $filters = $request->only([
+            // identity
+            'status', 'admin_id', 'assigned', 'created_by',
+            // attributes
+            'platform', 'is_valid',
+            // taxonomy
+            'category_id', 'include_subcategories',
+            'sub_category_id', 'sub_sub_category_id',
+            'type_id', 'season_id', 'zone_id',
+            // relation existence
+            'has_replies', 'has_notes', 'has_attachments',
+            // search + date ranges
+            'q',
+            'created_from', 'created_to',
+            'occurrence_from', 'occurrence_to',
+            'closed_from', 'closed_to',
+            'from', 'to',
+            // scope + sort
+            'with_trashed', 'only_trashed', 'sort',
+        ]);
+
+        $actingAdmin = Container::getInstance()->bound(ActingAdmin::class)
+            ? Container::getInstance()->make(ActingAdmin::class)
+            : null;
+
+        $this->tickets->applyFilters($query, $filters, $actingAdmin?->id);
 
         $perPage = (int) $request->query('per_page', 20);
         $perPage = max(1, min($perPage, 100));
 
-        return TicketResource::collection($query->paginate($perPage));
+        return TicketResource::collection($query->paginate($perPage)->appends($request->query()));
     }
 
     public function store(StoreTicketRequest $request): JsonResponse
