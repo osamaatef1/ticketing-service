@@ -15,7 +15,7 @@ class ZoneController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Zone::query()->latest('id');
+        $query = Zone::query()->withCount('categories')->latest('id');
 
         if ($request->filled('status')) {
             $query->where('status', $request->boolean('status'));
@@ -30,6 +30,9 @@ class ZoneController extends Controller
         if ($request->boolean('with_season')) {
             $query->with('season');
         }
+        if ($request->boolean('with_categories')) {
+            $query->with('categories');
+        }
         if ($request->boolean('with_trashed')) {
             $query->withTrashed();
         }
@@ -43,20 +46,22 @@ class ZoneController extends Controller
     {
         $zone = Zone::create($request->validated());
 
-        return ZoneResource::make($zone->fresh())
+        return ZoneResource::make($zone->fresh()->loadCount('categories'))
             ->response()
             ->setStatusCode(201);
     }
 
     public function show(Zone $zone): ZoneResource
     {
-        return ZoneResource::make($zone->load('season'));
+        return ZoneResource::make(
+            $zone->load(['season', 'categories'])->loadCount('categories')
+        );
     }
 
     public function update(UpdateZoneRequest $request, Zone $zone): ZoneResource
     {
         $zone->update($request->validated());
-        return ZoneResource::make($zone->fresh());
+        return ZoneResource::make($zone->fresh()->loadCount('categories'));
     }
 
     public function destroy(Zone $zone): JsonResponse

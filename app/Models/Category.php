@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Translatable\HasTranslations;
 
-class Zone extends Model
+class Category extends Model
 {
     use HasFactory, SoftDeletes, HasTranslations;
 
@@ -19,15 +19,22 @@ class Zone extends Model
 
     protected $casts = [
         'status' => 'boolean',
+        'is_custom' => 'boolean',
+        'enable_email' => 'boolean',
     ];
 
-    public function season(): BelongsTo
+    public function parent(): BelongsTo
     {
-        return $this->belongsTo(Season::class);
+        return $this->belongsTo(self::class, 'parent_id');
     }
 
-    public function categories(): HasMany
+    public function children(): HasMany
     {
-        return $this->hasMany(Category::class);
+        return $this->hasMany(self::class, 'parent_id');
+    }
+
+    public function zone(): BelongsTo
+    {
+        return $this->belongsTo(Zone::class);
     }
 }

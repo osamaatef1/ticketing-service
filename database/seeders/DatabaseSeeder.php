@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SeasonSeeder::class,
             ZoneSeeder::class,
+            CategorySeeder::class,
         ]);
     }
 }
