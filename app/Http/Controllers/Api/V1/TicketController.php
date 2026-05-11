@@ -20,6 +20,7 @@ class TicketController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $query = Ticket::query()
+            ->withCount(['replies', 'notes'])
             ->with('media')
             ->latest('id');
 
@@ -41,14 +42,15 @@ class TicketController extends Controller
 
         $ticket = $this->tickets->create($data, $admin->id, $files);
 
-        return TicketResource::make($ticket)
+        return TicketResource::make($ticket->loadCount(['replies', 'notes']))
             ->response()
             ->setStatusCode(201);
     }
 
     public function show(Ticket $ticket): TicketResource
     {
-        $ticket->load('media');
+        $ticket->load(['replies.media', 'notes.media', 'media'])
+            ->loadCount(['replies', 'notes']);
 
         return TicketResource::make($ticket);
     }
@@ -56,7 +58,7 @@ class TicketController extends Controller
     public function update(UpdateTicketRequest $request, Ticket $ticket): TicketResource
     {
         $ticket = $this->tickets->update($ticket, $request->validated());
-        return TicketResource::make($ticket->load('media'));
+        return TicketResource::make($ticket->loadCount(['replies', 'notes'])->load('media'));
     }
 
     public function destroy(Ticket $ticket): JsonResponse

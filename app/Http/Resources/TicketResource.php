@@ -50,6 +50,11 @@ class TicketResource extends JsonResource
             'assigned_admin' => $this->adminPayload($this->admin_id, $admins),
 
             'attachments' => MediaResource::collection($this->whenLoaded('media')),
+            'replies_count' => $this->whenCounted('replies'),
+            'notes_count' => $this->whenCounted('notes'),
+
+            'replies' => TicketReplyResource::collection($this->whenLoaded('replies')),
+            'notes' => TicketNoteResource::collection($this->whenLoaded('notes')),
 
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

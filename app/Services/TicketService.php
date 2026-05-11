@@ -3,6 +3,9 @@
 namespace App\Services;
 
 use App\Models\Ticket;
+use App\Models\TicketNote;
+use App\Models\TicketReply;
+use App\Support\Enums\ReplyAuthor;
 use App\Support\Enums\TicketStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
@@ -42,6 +45,54 @@ class TicketService
     {
         $ticket->update($data);
         return $ticket->fresh();
+    }
+
+    /**
+     * @param  array<string,mixed>  $data
+     * @param  UploadedFile[]  $attachments
+     */
+    public function addReply(Ticket $ticket, array $data, ?int $adminId, array $attachments = []): TicketReply
+    {
+        return DB::transaction(function () use ($ticket, $data, $adminId, $attachments) {
+            $reply = $ticket->replies()->create([
+                'description' => $data['description'],
+                'replied_by' => $data['replied_by'] ?? ReplyAuthor::Admin->value,
+                'admin_id' => $adminId,
+                'send_email' => (bool) ($data['send_email'] ?? false),
+                'send_whatsapp' => (bool) ($data['send_whatsapp'] ?? false),
+                'send_sms' => (bool) ($data['send_sms'] ?? false),
+            ]);
+
+            foreach ($attachments as $file) {
+                $reply->addMedia($file)->toMediaCollection('attachments');
+            }
+
+            if ($ticket->status === TicketStatus::New) {
+                $ticket->update(['status' => TicketStatus::InProgress]);
+            }
+
+            return $reply->fresh(['media']);
+        });
+    }
+
+    /**
+     * @param  array<string,mixed>  $data
+     * @param  UploadedFile[]  $attachments
+     */
+    public function addNote(Ticket $ticket, array $data, ?int $adminId, array $attachments = []): TicketNote
+    {
+        return DB::transaction(function () use ($ticket, $data, $adminId, $attachments) {
+            $note = $ticket->notes()->create([
+                'note' => $data['note'],
+                'admin_id' => $adminId,
+            ]);
+
+            foreach ($attachments as $file) {
+                $note->addMedia($file)->toMediaCollection('attachments');
+            }
+
+            return $note->fresh(['media']);
+        });
     }
 
     /**
